@@ -1,0 +1,12 @@
+[Unit]
+Description=Shadowsocks container
+Requires=docker.service
+After=docker.service
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/docker run --rm -e PASSWORD=abcabc -p 8384:8388 -p 8384:8388/udp -d --name ss shadowsocks/shadowsocks-libev
+ExecStop=/usr/bin/docker stop ss
+
+[Install]
+WantedBy=default.target
