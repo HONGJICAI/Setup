@@ -127,6 +127,11 @@
       register: vless_uuid
       changed_when: false
 
+    - name: Pull sing-box image
+      community.docker.docker_image:
+        name: ghcr.io/sagernet/sing-box:latest
+        source: pull
+
     - name: Generate Reality key pair
       shell: docker run --rm ghcr.io/sagernet/sing-box:latest sing-box generate reality-keypair
       register: reality_keys
@@ -135,10 +140,16 @@
     - name: Extract private key
       set_fact:
         private_key: "{{ reality_keys.stdout | regex_search('PrivateKey: (.+)', '\\1') | first }}"
+      failed_when: private_key is not defined or private_key == ''
 
     - name: Extract public key
       set_fact:
         public_key: "{{ reality_keys.stdout | regex_search('PublicKey: (.+)', '\\1') | first }}"
+      failed_when: public_key is not defined or public_key == ''
+
+    - name: Verify keys were extracted
+      debug:
+        msg: "Keys generated successfully - Private: {{ private_key[:10] }}..., Public: {{ public_key[:10] }}..."
 
     - name: Generate short_id
       shell: openssl rand -hex 8
@@ -178,23 +189,36 @@
       community.docker.docker_compose:
         project_src: "{{ singbox_dir }}"
         state: present
-        pull: yes
 
     - name: Wait for sing-box to be ready
       wait_for:
         port: "{{ singbox_port }}"
         delay: 2
-        timeout: 30
+        timeout: 60
 
     # Generate and display vless link
     - name: Get server public IP
-      shell: curl -s ifconfig.me
-      register: server_ip
+      set_fact:
+        server_ip: "{{ ansible_default_ipv4.address | default('') }}"
+
+    - name: Get server public IP from external service (fallback)
+      shell: curl -s --connect-timeout 5 ifconfig.me || echo ""
+      register: external_ip
       changed_when: false
+      when: server_ip == ''
+
+    - name: Set server IP
+      set_fact:
+        server_ip: "{{ external_ip.stdout if server_ip == '' else server_ip }}"
+
+    - name: Verify server IP was obtained
+      fail:
+        msg: "Failed to determine server IP address"
+      when: server_ip == ''
 
     - name: Build vless link
       set_fact:
-        vless_link: "vless://{{ vless_uuid.stdout }}@{{ server_ip.stdout }}:{{ singbox_port }}?encryption=none&flow=xtls-rprx-vision&security=reality&sni={{ server_name }}&fp=chrome&pbk={{ public_key }}&sid={{ short_id }}&type=tcp&headerType=none#sing-box-reality"
+        vless_link: "vless://{{ vless_uuid.stdout }}@{{ server_ip }}:{{ singbox_port }}?encryption=none&flow=xtls-rprx-vision&security=reality&sni={{ server_name }}&fp=chrome&pbk={{ public_key }}&sid={{ short_id }}&type=tcp&headerType=none#sing-box-reality"
 
     - name: Display connection information
       debug:
@@ -202,7 +226,7 @@
           - "=========================================="
           - "sing-box Proxy Setup Complete!"
           - "=========================================="
-          - "Server IP: {{ server_ip.stdout }}"
+          - "Server IP: {{ server_ip }}"
           - "Port: {{ singbox_port }}"
           - "Protocol: vless + reality"
           - ""
@@ -224,7 +248,7 @@
           sing-box Proxy Connection Information
           ======================================
           
-          Server IP: {{ server_ip.stdout }}
+          Server IP: {{ server_ip }}
           Port: {{ singbox_port }}
           Protocol: vless + reality
           
