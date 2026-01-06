@@ -106,7 +106,7 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
     Write-Host "Configuring Git..." -ForegroundColor Yellow
     
     # Enable Git credential manager
-    git config --global credential.helper manager-core
+    git config --global credential.helper manager
     
     # Set default branch name
     git config --global init.defaultBranch main

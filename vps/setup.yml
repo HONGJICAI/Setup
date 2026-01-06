@@ -68,19 +68,26 @@
         state: directory
         mode: '0755'
 
+    - name: Download Docker GPG key
+      get_url:
+        url: https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg
+        dest: /tmp/docker.gpg
+        mode: '0644'
+      when: ansible_os_family == "Debian"
+
     - name: Add Docker GPG key
       shell: |
-        curl -fsSL https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        gpg --dearmor -o /etc/apt/keyrings/docker.gpg /tmp/docker.gpg
         chmod a+r /etc/apt/keyrings/docker.gpg
       args:
         creates: /etc/apt/keyrings/docker.gpg
       when: ansible_os_family == "Debian"
 
     - name: Add Docker repository
-      shell: |
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/{{ ansible_distribution | lower }} $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-      args:
-        creates: /etc/apt/sources.list.d/docker.list
+      apt_repository:
+        repo: "deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
       when: ansible_os_family == "Debian"
 
     - name: Update apt cache after adding Docker repo
@@ -134,8 +141,14 @@
       command: docker run --rm hello-world
       register: docker_test
       changed_when: false
+      ignore_errors: yes
 
     - name: Display Docker test result
       debug:
         msg: "Docker is working correctly!"
-      when: "'Hello from Docker!' in docker_test.stdout"
+      when: docker_test is succeeded and 'Hello from Docker!' in docker_test.stdout
+
+    - name: Display Docker test warning
+      debug:
+        msg: "Warning: Docker test failed. This may be due to network issues or image download problems."
+      when: docker_test is failed
