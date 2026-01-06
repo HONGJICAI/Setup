@@ -85,8 +85,8 @@ The connection information is also saved to `/opt/singbox/connection_info.txt` o
 
 You can customize the setup by editing variables in `setup.yml`:
 - `singbox_port`: Default is 443
-- `server_name`: SNI for reality (default: www.google.com)
-- `dest_server`: Reality destination server (default: www.google.com:443)
+- `server_name`: SNI for reality (default: www.microsoft.com)
+- `dest_server`: Reality destination server (default: www.microsoft.com:443)
 
 ## Using the vless Link
 

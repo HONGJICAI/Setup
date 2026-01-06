@@ -5,8 +5,8 @@
   vars:
     singbox_port: 443
     singbox_dir: /opt/singbox
-    server_name: "www.google.com"  # SNI for reality
-    dest_server: "www.google.com:443"  # Reality destination
+    server_name: "www.microsoft.com"  # SNI for reality
+    dest_server: "www.microsoft.com:443"  # Reality destination
     
   tasks:
     - name: Update apt cache
