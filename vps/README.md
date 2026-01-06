@@ -2,6 +2,24 @@
 
 This folder contains Ansible playbooks to set up a sing-box proxy server with vless + reality protocol on Ubuntu VPS.
 
+## Structure
+
+The setup is organized into modular task files for better maintainability:
+
+```
+vps/
+├── setup.yml              # Main playbook
+├── inventory.ini          # Server inventory
+├── requirements.yml       # Ansible dependencies
+├── tasks/                 # Task modules
+│   ├── bbr.yml           # BBR TCP congestion control setup
+│   ├── docker.yml        # Docker and Docker Compose installation
+│   └── singbox.yml       # sing-box proxy deployment
+└── templates/             # Configuration templates
+    ├── singbox-config.json.j2
+    └── docker-compose.yml.j2
+```
+
 ## Features
 
 - **BBR TCP Congestion Control**: Optimizes network performance

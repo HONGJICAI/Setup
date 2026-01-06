@@ -1,0 +1,146 @@
+---
+# sing-box Proxy Setup with vless + reality
+- name: Generate UUID for vless
+  shell: cat /proc/sys/kernel/random/uuid
+  register: vless_uuid
+  changed_when: false
+
+- name: Pull sing-box image
+  community.docker.docker_image:
+    name: ghcr.io/sagernet/sing-box:latest
+    source: pull
+
+- name: Generate Reality key pair
+  shell: docker run --rm ghcr.io/sagernet/sing-box:latest sing-box generate reality-keypair
+  register: reality_keys
+  changed_when: false
+
+- name: Extract private key
+  set_fact:
+    private_key: "{{ reality_keys.stdout | regex_search('PrivateKey: (.+)', '\\1') | first }}"
+  failed_when: private_key is not defined or private_key == ''
+
+- name: Extract public key
+  set_fact:
+    public_key: "{{ reality_keys.stdout | regex_search('PublicKey: (.+)', '\\1') | first }}"
+  failed_when: public_key is not defined or public_key == ''
+
+- name: Verify keys were extracted
+  debug:
+    msg: "Keys generated successfully - Private: {{ private_key[:10] }}..., Public: {{ public_key[:10] }}..."
+
+- name: Generate short_id
+  shell: openssl rand -hex 8
+  register: short_id_result
+  changed_when: false
+
+- name: Set short_id
+  set_fact:
+    short_id: "{{ short_id_result.stdout }}"
+
+- name: Create sing-box directory
+  file:
+    path: "{{ singbox_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Create sing-box config from template
+  template:
+    src: singbox-config.json.j2
+    dest: "{{ singbox_dir }}/config.json"
+    mode: '0644'
+
+- name: Create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ singbox_dir }}/docker-compose.yml"
+    mode: '0644'
+
+- name: Stop existing sing-box container
+  community.docker.docker_compose:
+    project_src: "{{ singbox_dir }}"
+    state: absent
+  ignore_errors: yes
+
+- name: Start sing-box container
+  community.docker.docker_compose:
+    project_src: "{{ singbox_dir }}"
+    state: present
+
+- name: Wait for sing-box to be ready
+  wait_for:
+    port: "{{ singbox_port }}"
+    delay: 2
+    timeout: 60
+
+- name: Get server public IP
+  set_fact:
+    server_ip: "{{ ansible_default_ipv4.address | default('') }}"
+
+- name: Get server public IP from external service (fallback)
+  shell: curl -s --connect-timeout 5 ifconfig.me || echo ""
+  register: external_ip
+  changed_when: false
+  when: server_ip == ''
+
+- name: Set server IP
+  set_fact:
+    server_ip: "{{ external_ip.stdout if server_ip == '' else server_ip }}"
+
+- name: Verify server IP was obtained
+  fail:
+    msg: "Failed to determine server IP address"
+  when: server_ip == ''
+
+- name: Build vless link
+  set_fact:
+    vless_link: "vless://{{ vless_uuid.stdout }}@{{ server_ip }}:{{ singbox_port }}?encryption=none&flow=xtls-rprx-vision&security=reality&sni={{ server_name }}&fp=chrome&pbk={{ public_key }}&sid={{ short_id }}&type=tcp&headerType=none#sing-box-reality"
+
+- name: Display connection information
+  debug:
+    msg:
+      - "=========================================="
+      - "sing-box Proxy Setup Complete!"
+      - "=========================================="
+      - "Server IP: {{ server_ip }}"
+      - "Port: {{ singbox_port }}"
+      - "Protocol: vless + reality"
+      - ""
+      - "UUID: {{ vless_uuid.stdout }}"
+      - "Public Key: {{ public_key }}"
+      - "Short ID: {{ short_id }}"
+      - "SNI: {{ server_name }}"
+      - ""
+      - "VLESS Connection Link:"
+      - "{{ vless_link }}"
+      - ""
+      - "=========================================="
+      - "Save this information securely!"
+      - "=========================================="
+
+- name: Save connection info to file
+  copy:
+    content: |
+      sing-box Proxy Connection Information
+      ======================================
+      
+      Server IP: {{ server_ip }}
+      Port: {{ singbox_port }}
+      Protocol: vless + reality
+      
+      UUID: {{ vless_uuid.stdout }}
+      Public Key: {{ public_key }}
+      Private Key: {{ private_key }}
+      Short ID: {{ short_id }}
+      SNI: {{ server_name }}
+      
+      VLESS Connection Link:
+      {{ vless_link }}
+      
+      Generated at: {{ ansible_date_time.iso8601 }}
+    dest: "{{ singbox_dir }}/connection_info.txt"
+    mode: '0600'
+
+- name: Display file location
+  debug:
+    msg: "Connection information saved to {{ singbox_dir }}/connection_info.txt"
