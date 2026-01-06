@@ -1,0 +1,48 @@
+{
+  "log": {
+    "level": "info",
+    "timestamp": true
+  },
+  "inbounds": [
+    {
+      "type": "vless",
+      "tag": "vless-in",
+      "listen": "::",
+      "listen_fields": {
+        "listen": "::",
+        "listen_port": {{ singbox_port }}
+      },
+      "users": [
+        {
+          "uuid": "{{ vless_uuid.stdout }}",
+          "flow": "xtls-rprx-vision"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": "{{ server_name }}",
+        "reality": {
+          "enabled": true,
+          "handshake": {
+            "server": "{{ dest_server }}",
+            "server_port": 443
+          },
+          "private_key": "{{ private_key }}",
+          "short_id": [
+            "{{ short_id }}"
+          ]
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "type": "block",
+      "tag": "block"
+    }
+  ]
+}

@@ -1,13 +1,18 @@
 ---
-- name: Setup VPS Environment
+- name: Setup Ubuntu VPS with sing-box Proxy
   hosts: vps
   become: yes
+  vars:
+    singbox_port: 443
+    singbox_dir: /opt/singbox
+    server_name: "www.google.com"  # SNI for reality
+    dest_server: "www.google.com:443"  # Reality destination
+    
   tasks:
     - name: Update apt cache
       apt:
         update_cache: yes
         cache_valid_time: 3600
-      when: ansible_os_family == "Debian"
 
     - name: Install required packages
       apt:
@@ -18,8 +23,9 @@
           - gnupg
           - lsb-release
           - software-properties-common
+          - openssl
+          - qrencode
         state: present
-      when: ansible_os_family == "Debian"
 
     # BBR Setup
     - name: Check if BBR is already enabled
@@ -60,7 +66,6 @@
           - containerd
           - runc
         state: absent
-      when: ansible_os_family == "Debian"
 
     - name: Create keyrings directory
       file:
@@ -70,10 +75,9 @@
 
     - name: Download Docker GPG key
       get_url:
-        url: https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg
+        url: https://download.docker.com/linux/ubuntu/gpg
         dest: /tmp/docker.gpg
         mode: '0644'
-      when: ansible_os_family == "Debian"
 
     - name: Add Docker GPG key
       shell: |
@@ -81,19 +85,16 @@
         chmod a+r /etc/apt/keyrings/docker.gpg
       args:
         creates: /etc/apt/keyrings/docker.gpg
-      when: ansible_os_family == "Debian"
 
     - name: Add Docker repository
       apt_repository:
-        repo: "deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable"
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
         state: present
         filename: docker
-      when: ansible_os_family == "Debian"
 
     - name: Update apt cache after adding Docker repo
       apt:
         update_cache: yes
-      when: ansible_os_family == "Debian"
 
     - name: Install Docker
       apt:
@@ -104,7 +105,6 @@
           - docker-buildx-plugin
           - docker-compose-plugin
         state: present
-      when: ansible_os_family == "Debian"
 
     - name: Start and enable Docker service
       systemd:
@@ -112,43 +112,135 @@
         state: started
         enabled: yes
 
-    - name: Add user to docker group (if not root)
-      user:
-        name: "{{ ansible_user }}"
-        groups: docker
-        append: yes
-      when: ansible_user != "root"
-
-    - name: Verify Docker installation
+    - name: Display Docker version
       command: docker --version
       register: docker_version
       changed_when: false
 
-    - name: Display Docker version
+    - name: Show Docker version
       debug:
         msg: "Docker version: {{ docker_version.stdout }}"
 
-    - name: Verify Docker Compose installation
-      command: docker compose version
-      register: docker_compose_version
+    # Generate UUID and Keys
+    - name: Generate UUID for vless
+      shell: cat /proc/sys/kernel/random/uuid
+      register: vless_uuid
       changed_when: false
 
-    - name: Display Docker Compose version
-      debug:
-        msg: "Docker Compose version: {{ docker_compose_version.stdout }}"
-
-    - name: Test Docker with hello-world
-      command: docker run --rm hello-world
-      register: docker_test
+    - name: Generate Reality key pair
+      shell: docker run --rm ghcr.io/sagernet/sing-box:latest sing-box generate reality-keypair
+      register: reality_keys
       changed_when: false
+
+    - name: Extract private key
+      set_fact:
+        private_key: "{{ reality_keys.stdout | regex_search('PrivateKey: (.+)', '\\1') | first }}"
+
+    - name: Extract public key
+      set_fact:
+        public_key: "{{ reality_keys.stdout | regex_search('PublicKey: (.+)', '\\1') | first }}"
+
+    - name: Generate short_id
+      shell: openssl rand -hex 8
+      register: short_id_result
+      changed_when: false
+
+    - name: Set short_id
+      set_fact:
+        short_id: "{{ short_id_result.stdout }}"
+
+    # Create sing-box directory and configuration
+    - name: Create sing-box directory
+      file:
+        path: "{{ singbox_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create sing-box config from template
+      template:
+        src: singbox-config.json.j2
+        dest: "{{ singbox_dir }}/config.json"
+        mode: '0644'
+
+    - name: Create docker-compose file
+      template:
+        src: docker-compose.yml.j2
+        dest: "{{ singbox_dir }}/docker-compose.yml"
+        mode: '0644'
+
+    - name: Stop existing sing-box container
+      community.docker.docker_compose:
+        project_src: "{{ singbox_dir }}"
+        state: absent
       ignore_errors: yes
 
-    - name: Display Docker test result
-      debug:
-        msg: "Docker is working correctly!"
-      when: docker_test is succeeded and 'Hello from Docker!' in docker_test.stdout
+    - name: Start sing-box container
+      community.docker.docker_compose:
+        project_src: "{{ singbox_dir }}"
+        state: present
+        pull: yes
 
-    - name: Display Docker test warning
+    - name: Wait for sing-box to be ready
+      wait_for:
+        port: "{{ singbox_port }}"
+        delay: 2
+        timeout: 30
+
+    # Generate and display vless link
+    - name: Get server public IP
+      shell: curl -s ifconfig.me
+      register: server_ip
+      changed_when: false
+
+    - name: Build vless link
+      set_fact:
+        vless_link: "vless://{{ vless_uuid.stdout }}@{{ server_ip.stdout }}:{{ singbox_port }}?encryption=none&flow=xtls-rprx-vision&security=reality&sni={{ server_name }}&fp=chrome&pbk={{ public_key }}&sid={{ short_id }}&type=tcp&headerType=none#sing-box-reality"
+
+    - name: Display connection information
       debug:
-        msg: "Warning: Docker test failed. This may be due to network issues or image download problems."
-      when: docker_test is failed
+        msg:
+          - "=========================================="
+          - "sing-box Proxy Setup Complete!"
+          - "=========================================="
+          - "Server IP: {{ server_ip.stdout }}"
+          - "Port: {{ singbox_port }}"
+          - "Protocol: vless + reality"
+          - ""
+          - "UUID: {{ vless_uuid.stdout }}"
+          - "Public Key: {{ public_key }}"
+          - "Short ID: {{ short_id }}"
+          - "SNI: {{ server_name }}"
+          - ""
+          - "VLESS Connection Link:"
+          - "{{ vless_link }}"
+          - ""
+          - "=========================================="
+          - "Save this information securely!"
+          - "=========================================="
+
+    - name: Save connection info to file
+      copy:
+        content: |
+          sing-box Proxy Connection Information
+          ======================================
+          
+          Server IP: {{ server_ip.stdout }}
+          Port: {{ singbox_port }}
+          Protocol: vless + reality
+          
+          UUID: {{ vless_uuid.stdout }}
+          Public Key: {{ public_key }}
+          Private Key: {{ private_key }}
+          Short ID: {{ short_id }}
+          SNI: {{ server_name }}
+          
+          VLESS Connection Link:
+          {{ vless_link }}
+          
+          Generated at: {{ ansible_date_time.iso8601 }}
+        dest: "{{ singbox_dir }}/connection_info.txt"
+        mode: '0600'
+
+    - name: Display file location
+      debug:
+        msg: "Connection information saved to {{ singbox_dir }}/connection_info.txt"
