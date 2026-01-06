@@ -60,7 +60,7 @@ Write-Host "Adding useful buckets..." -ForegroundColor Yellow
 
 $buckets = @('extras', 'versions', 'java', 'nerd-fonts')
 foreach ($bucket in $buckets) {
-    $bucketExists = scoop bucket list | Select-String -Pattern "^$bucket$"
+    $bucketExists = scoop bucket list | Select-String -Pattern "^$([regex]::Escape($bucket))$"
     if (-not $bucketExists) {
         Write-Host "  Adding bucket: $bucket" -ForegroundColor Cyan
         scoop bucket add $bucket
@@ -89,7 +89,7 @@ $essentialPackages = @(
 )
 
 foreach ($package in $essentialPackages) {
-    $installed = scoop list | Select-String -Pattern "^$package "
+    $installed = scoop list | Select-String -Pattern "^$([regex]::Escape($package)) "
     if (-not $installed) {
         Write-Host "  Installing: $package" -ForegroundColor Cyan
         scoop install $package

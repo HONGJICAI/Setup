@@ -40,7 +40,7 @@ foreach ($package in $packages) {
     $package = $package.Trim()
     
     # Check if already installed
-    $installed = scoop list | Select-String -Pattern "^$package "
+    $installed = scoop list | Select-String -Pattern "^$([regex]::Escape($package)) "
     if ($installed) {
         Write-Host "[ SKIP ] $package (already installed)" -ForegroundColor Gray
         $skipped++
@@ -50,13 +50,14 @@ foreach ($package in $packages) {
     # Install package
     Write-Host "[ .... ] Installing $package..." -ForegroundColor Cyan
     try {
-        scoop install $package 2>&1 | Out-Null
+        $output = scoop install $package 2>&1
         if ($LASTEXITCODE -eq 0) {
             Write-Host "[ OK ] $package installed successfully" -ForegroundColor Green
             $successful++
         }
         else {
             Write-Host "[ FAIL ] Failed to install $package" -ForegroundColor Red
+            Write-Host $output -ForegroundColor DarkRed
             $failed++
         }
     }
