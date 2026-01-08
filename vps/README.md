@@ -33,8 +33,14 @@ vps/
 - Ubuntu VPS (20.04 or later recommended)
 - Ansible installed on your local machine
 - SSH access to your VPS with sudo privileges
-- Python 3 installed on the VPS
 - Port 443 open on your VPS firewall
+
+**Server Requirements:**
+The playbook will automatically install the following on your VPS:
+- Python 3 (required by Ansible for remote execution)
+- Docker and Docker Compose
+- System packages for HTTPS, cryptography, and key generation
+- sing-box proxy software
 
 ## Installation
 
@@ -69,6 +75,17 @@ The playbook will:
 4. Deploy sing-box in a Docker container
 5. Configure vless + reality protocol
 6. Display the vless connection link
+
+**System Packages Installed:**
+- `python3` & `python3-pip` - Required by Ansible for remote execution and package management
+- `apt-transport-https` - Enables APT to download packages over HTTPS
+- `ca-certificates` - Common Certificate Authority certificates for SSL/TLS verification
+- `curl` - Tool for transferring data, used to download Docker GPG keys
+- `gnupg` - GNU Privacy Guard for verifying package signatures
+- `lsb-release` - Reports Linux distribution version info (needed for Docker repo setup)
+- `software-properties-common` - Provides `add-apt-repository` command for managing repos
+- `openssl` - Cryptographic toolkit for generating Reality keys and short IDs
+- `qrencode` - Generates QR codes for easy vless link import on mobile devices
 
 ## Connection Information
 
