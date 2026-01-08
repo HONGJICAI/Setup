@@ -137,24 +137,9 @@
     delay: 2
     timeout: 60
 
-- name: Get server public IP
+- name: Set server IP from inventory
   set_fact:
-    server_ip: "{{ ansible_default_ipv4.address | default('') }}"
-
-- name: Get server public IP from external service (fallback)
-  shell: curl -s --connect-timeout 5 ifconfig.me || echo ""
-  register: external_ip
-  changed_when: false
-  when: server_ip == ''
-
-- name: Set server IP
-  set_fact:
-    server_ip: "{{ external_ip.stdout if server_ip == '' else server_ip }}"
-
-- name: Verify server IP was obtained
-  fail:
-    msg: "Failed to determine server IP address"
-  when: server_ip == ''
+    server_ip: "{{ ansible_host }}"
 
 - name: Build vless link
   set_fact:
