@@ -6,9 +6,9 @@
   changed_when: false
 
 - name: Pull sing-box image
-  community.docker.docker_image:
-    name: ghcr.io/sagernet/sing-box:latest
-    source: pull
+  shell: docker pull ghcr.io/sagernet/sing-box:latest
+  register: docker_pull_result
+  changed_when: "'Downloaded newer image' in docker_pull_result.stdout or 'Pulling from' in docker_pull_result.stdout"
 
 - name: Generate Reality key pair
   shell: docker run --rm ghcr.io/sagernet/sing-box:latest sing-box generate reality-keypair
@@ -57,15 +57,11 @@
     mode: '0644'
 
 - name: Stop existing sing-box container
-  community.docker.docker_compose:
-    project_src: "{{ singbox_dir }}"
-    state: absent
+  shell: cd {{ singbox_dir }} && docker compose down
   ignore_errors: yes
 
 - name: Start sing-box container
-  community.docker.docker_compose:
-    project_src: "{{ singbox_dir }}"
-    state: present
+  shell: cd {{ singbox_dir }} && docker compose up -d
 
 - name: Wait for sing-box to be ready
   wait_for:

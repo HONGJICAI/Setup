@@ -47,21 +47,15 @@ The playbook will automatically install the following on your VPS:
 1. Install Ansible on your local machine:
    ```bash
    pip install ansible
-   pip install docker  # Required for docker_compose module
    ```
 
-2. Install Ansible Docker collection:
-   ```bash
-   ansible-galaxy collection install community.docker
-   ```
-
-3. Update the inventory file `inventory.ini` with your VPS details:
+2. Update the inventory file `inventory.ini` with your VPS details:
    ```ini
    [vps]
    my-vps ansible_host=YOUR_VPS_IP ansible_user=root ansible_ssh_private_key_file=~/.ssh/id_rsa
    ```
 
-4. Run the setup playbook:
+3. Run the setup playbook:
    ```bash
    ansible-playbook -i inventory.ini setup.yml
    ```
