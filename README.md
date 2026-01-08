@@ -13,6 +13,7 @@ Personal use software and scripts for VPS and Windows environments.
 - **[windows/](windows/)** - Scoop-based setup scripts for Windows
   - Automated Windows environment setup
   - Package management with Scoop
+  - Run Ansible on Windows via Docker (for VPS management)
 
 ## Quick Start
 
@@ -30,6 +31,17 @@ ansible-playbook -i inventory.ini setup.yml
 cd windows
 .\setup.ps1
 ```
+
+### Run Ansible from Windows (VPS Management)
+
+Windows users can manage their VPS using Ansible via Docker:
+
+```powershell
+cd windows
+.\run-ansible.ps1
+```
+
+This runs the VPS Ansible playbooks from Windows without installing Ansible natively. Requires Docker Desktop.
 
 ## Requirements
 
