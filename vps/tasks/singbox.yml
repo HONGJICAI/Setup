@@ -1,8 +1,47 @@
 ---
 # sing-box Proxy Setup with vless + reality
+# Check if existing configuration should be preserved
+- name: Check if connection info file exists
+  stat:
+    path: "{{ singbox_dir }}/connection_info.txt"
+  register: connection_info_file
+
+- name: Load existing connection parameters
+  shell: |
+    grep "^UUID:" {{ singbox_dir }}/connection_info.txt | cut -d' ' -f2
+  register: existing_uuid
+  when: connection_info_file.stat.exists and not force_regenerate | default(false)
+  changed_when: false
+  failed_when: false
+
+- name: Load existing private key
+  shell: |
+    grep "^Private Key:" {{ singbox_dir }}/connection_info.txt | cut -d' ' -f3
+  register: existing_private_key
+  when: connection_info_file.stat.exists and not force_regenerate | default(false)
+  changed_when: false
+  failed_when: false
+
+- name: Load existing public key
+  shell: |
+    grep "^Public Key:" {{ singbox_dir }}/connection_info.txt | cut -d' ' -f3
+  register: existing_public_key
+  when: connection_info_file.stat.exists and not force_regenerate | default(false)
+  changed_when: false
+  failed_when: false
+
+- name: Load existing short ID
+  shell: |
+    grep "^Short ID:" {{ singbox_dir }}/connection_info.txt | cut -d' ' -f3
+  register: existing_short_id
+  when: connection_info_file.stat.exists and not force_regenerate | default(false)
+  changed_when: false
+  failed_when: false
+
 - name: Generate UUID for vless
   shell: cat /proc/sys/kernel/random/uuid
   register: vless_uuid
+  when: not connection_info_file.stat.exists or force_regenerate | default(false) or existing_uuid.stdout == ''
   changed_when: false
 
 - name: Pull sing-box image
@@ -13,30 +52,59 @@
 - name: Generate Reality key pair
   shell: docker run --rm ghcr.io/sagernet/sing-box:latest generate reality-keypair
   register: reality_keys
+  when: not connection_info_file.stat.exists or force_regenerate | default(false) or existing_private_key.stdout == ''
   changed_when: false
 
-- name: Extract private key
+- name: Extract private key from generation
   set_fact:
     private_key: "{{ reality_keys.stdout | regex_search('PrivateKey: (.+)', '\\1') | first }}"
+  when: reality_keys is not skipped
   failed_when: private_key is not defined or private_key == ''
 
-- name: Extract public key
+- name: Extract public key from generation
   set_fact:
     public_key: "{{ reality_keys.stdout | regex_search('PublicKey: (.+)', '\\1') | first }}"
+  when: reality_keys is not skipped
   failed_when: public_key is not defined or public_key == ''
 
-- name: Verify keys were extracted
+- name: Use existing private key
+  set_fact:
+    private_key: "{{ existing_private_key.stdout }}"
+  when: connection_info_file.stat.exists and not force_regenerate | default(false) and existing_private_key.stdout != ''
+
+- name: Use existing public key
+  set_fact:
+    public_key: "{{ existing_public_key.stdout }}"
+  when: connection_info_file.stat.exists and not force_regenerate | default(false) and existing_public_key.stdout != ''
+
+- name: Use existing UUID
+  set_fact:
+    vless_uuid: "{{ {'stdout': existing_uuid.stdout} }}"
+  when: connection_info_file.stat.exists and not force_regenerate | default(false) and existing_uuid.stdout != ''
+
+- name: Verify keys were extracted or loaded
   debug:
-    msg: "Keys generated successfully - Private: {{ private_key[:10] }}..., Public: {{ public_key[:10] }}..."
+    msg: "Keys ready - Private: {{ private_key[:10] }}..., Public: {{ public_key[:10] }}..."
 
 - name: Generate short_id
   shell: openssl rand -hex 8
   register: short_id_result
+  when: not connection_info_file.stat.exists or force_regenerate | default(false) or existing_short_id.stdout == ''
   changed_when: false
 
-- name: Set short_id
+- name: Set short_id from generation
   set_fact:
     short_id: "{{ short_id_result.stdout }}"
+  when: short_id_result is not skipped
+
+- name: Use existing short_id
+  set_fact:
+    short_id: "{{ existing_short_id.stdout }}"
+  when: connection_info_file.stat.exists and not force_regenerate | default(false) and existing_short_id.stdout != ''
+
+- name: Display parameter status
+  debug:
+    msg: "{{ 'Using existing connection parameters' if (connection_info_file.stat.exists and not force_regenerate | default(false)) else 'Generated new connection parameters' }}"
 
 - name: Create sing-box directory
   file:

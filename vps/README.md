@@ -60,6 +60,24 @@ The playbook will automatically install the following on your VPS:
    ansible-playbook -i inventory.ini setup.yml
    ```
 
+## Connection Parameter Persistence
+
+The playbook automatically preserves connection parameters (UUID, keys, short_id) once generated:
+
+- **First run**: Generates new connection parameters and saves them
+- **Subsequent runs**: Reuses existing parameters from `/opt/singbox/connection_info.txt`
+- **Force regeneration**: Add `-e force_regenerate=true` to generate new parameters
+
+```bash
+# Normal run - reuses existing parameters
+ansible-playbook -i inventory.ini setup.yml
+
+# Force regenerate parameters (creates new connection link)
+ansible-playbook -i inventory.ini setup.yml -e force_regenerate=true
+```
+
+**Note**: Forcing regeneration will create a new vless connection link. You'll need to update all your client devices with the new link.
+
 ## What Gets Installed
 
 The playbook will:
