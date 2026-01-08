@@ -11,7 +11,7 @@
   changed_when: "'Downloaded newer image' in docker_pull_result.stdout or 'Pulling from' in docker_pull_result.stdout"
 
 - name: Generate Reality key pair
-  shell: docker run --rm ghcr.io/sagernet/sing-box:latest sing-box generate reality-keypair
+  shell: docker run --rm ghcr.io/sagernet/sing-box:latest generate reality-keypair
   register: reality_keys
   changed_when: false
 
