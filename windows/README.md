@@ -1,14 +1,22 @@
-# Windows Setup with Scoop
+# Windows Setup with Scoop and Winget
 
-This folder contains scripts to set up and maintain a Windows environment using Scoop package manager.
+This folder contains scripts to set up and maintain a Windows environment using Scoop package manager and Winget.
 
 ## Scripts
 
 ### setup.ps1
-Main setup script that installs and configures Scoop package manager with essential tools.
+Main setup script that:
+- Installs Scoop package manager with custom installation path
+- Installs applications via winget (Chrome, VSCode, Honeyview, Docker Desktop)
+- Installs essential development tools via Scoop
+- Configures Git with recommended settings
+
+**Scoop Installation Path:**
+- Prefers `D:\apps\Scoop` if D: drive exists
+- Falls back to `C:\apps\Scoop` if D: drive is not available
 
 ### install-packages.ps1
-Installs additional packages from `packages.txt` file.
+Installs additional packages from `packages.txt` file using Scoop.
 
 ### run-ansible.ps1
 Runs Ansible playbooks on Windows using Docker, allowing you to manage VPS from Windows without installing Ansible natively.
@@ -18,6 +26,7 @@ Runs Ansible playbooks on Windows using Docker, allowing you to manage VPS from 
 - Windows 10/11 or Windows Server
 - PowerShell 5.1 or later
 - Internet connection
+- Administrator privileges (recommended)
 
 ## Installation
 
@@ -28,12 +37,40 @@ Runs Ansible playbooks on Windows using Docker, allowing you to manage VPS from 
    .\setup.ps1
    ```
 
-## What's Included
+The script will:
+- Determine the best installation path for Scoop (D:\apps\Scoop or C:\apps\Scoop)
+- Install Scoop package manager
+- Install winget applications: Chrome, VSCode, Honeyview, Docker Desktop
+- Install Scoop essentials: git, 7zip, curl, wget, and more
+- Configure Git with recommended settings
 
-The setup script will:
-- Install Scoop package manager if not already installed
-- Configure Scoop with recommended settings
-- Install essential packages and tools
+## What's Installed
+
+### Via Winget
+- **Google Chrome** - Web browser
+- **Visual Studio Code** - Code editor
+- **Honeyview** - Image viewer
+- **Docker Desktop** - Container platform
+
+### Via Scoop
+- **git** - Version control system
+- **7zip** - File archiver
+- **aria2** - Download manager (speeds up Scoop downloads)
+- **curl** - Data transfer tool
+- **wget** - File downloader
+- **sudo** - Run commands with elevated privileges
+- **which** - Locate commands
+- **grep** - Text search utility
+- **less** - File pager
+- **vim** - Text editor
+
+## Custom Scoop Installation Path
+
+The script automatically chooses the installation path:
+- **If D: drive exists**: Installs to `D:\apps\Scoop`
+- **If D: drive doesn't exist**: Installs to `C:\apps\Scoop`
+
+This allows you to keep applications on a separate drive if available, saving space on your system drive.
 
 ## Scoop Overview
 
