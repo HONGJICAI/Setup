@@ -1,0 +1,39 @@
+---
+- name: Setup Ubuntu VPS with sing-box Proxy
+  hosts: vps
+  become: yes
+  vars:
+    singbox_port: 443
+    singbox_dir: /opt/singbox
+    server_name: "www.microsoft.com"  # SNI for reality
+    dest_server: "www.microsoft.com:443"  # Reality destination
+    
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install required packages
+      apt:
+        name:
+          - python3                    # Required by Ansible for remote execution
+          - python3-pip                # Python package manager for additional tools
+          - apt-transport-https        # Allows APT to retrieve packages over HTTPS
+          - ca-certificates            # Common CA certificates for SSL/TLS verification
+          - curl                       # Command-line tool for transferring data with URLs
+          - gnupg                      # GNU Privacy Guard for digital signatures and encryption
+          - lsb-release                # Provides Linux Standard Base version reporting
+          - software-properties-common # Manages software repositories (needed for add-apt-repository)
+          - openssl                    # Cryptographic toolkit for generating keys and certificates
+          - qrencode                   # Generates QR codes for easy mobile client configuration
+        state: present
+
+    - name: Setup BBR TCP Congestion Control
+      include_tasks: tasks/bbr.yml
+
+    - name: Install Docker and Docker Compose
+      include_tasks: tasks/docker.yml
+
+    - name: Setup sing-box Proxy
+      include_tasks: tasks/singbox.yml

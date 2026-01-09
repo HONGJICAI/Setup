@@ -1,0 +1,114 @@
+name: Validate Setup Scripts
+
+on:
+  push:
+    branches: [ main, copilot/** ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-ansible:
+    name: Validate Ansible Playbooks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Ansible and dependencies
+      run: |
+        pip install ansible ansible-lint yamllint
+        ansible-galaxy collection install community.docker
+
+    - name: Validate YAML syntax
+      run: |
+        echo "Validating YAML files..."
+        yamllint -d "{extends: default, rules: {line-length: {max: 120}, comments: {min-spaces-from-content: 1}}}" vps/
+
+    - name: Check Ansible syntax
+      run: |
+        echo "Checking Ansible playbook syntax..."
+        cd vps
+        ansible-playbook --syntax-check setup.yml
+
+    - name: Run ansible-lint
+      run: |
+        echo "Running ansible-lint..."
+        cd vps
+        ansible-lint setup.yml tasks/*.yml || true
+
+    - name: Validate templates
+      run: |
+        echo "Validating Jinja2 templates..."
+        python3 << 'EOF'
+        import json
+        from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
+        
+        env = Environment(loader=FileSystemLoader('vps/templates'))
+        templates = ['singbox-config.json.j2', 'docker-compose.yml.j2']
+        
+        for template_name in templates:
+            try:
+                template = env.get_template(template_name)
+                print(f"✓ {template_name} is valid")
+            except TemplateSyntaxError as e:
+                print(f"✗ {template_name} has syntax error: {e}")
+                exit(1)
+        EOF
+
+  validate-powershell:
+    name: Validate PowerShell Scripts
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate PowerShell syntax
+      shell: pwsh
+      run: |
+        Write-Host "Validating PowerShell scripts..."
+        $scripts = Get-ChildItem -Path windows -Filter *.ps1
+        $errors = 0
+        
+        foreach ($script in $scripts) {
+            Write-Host "Checking $($script.Name)..."
+            $parseErrors = $null
+            $null = [System.Management.Automation.PSParser]::Tokenize(
+                (Get-Content $script.FullName -Raw), 
+                [ref]$parseErrors
+            )
+            
+            if ($parseErrors) {
+                Write-Host "✗ $($script.Name) has syntax errors:" -ForegroundColor Red
+                $parseErrors | ForEach-Object { Write-Host "  - $_" }
+                $errors++
+            } else {
+                Write-Host "✓ $($script.Name) is valid" -ForegroundColor Green
+            }
+        }
+        
+        if ($errors -gt 0) {
+            exit 1
+        }
+
+    - name: Run PSScriptAnalyzer
+      shell: pwsh
+      run: |
+        Write-Host "Installing PSScriptAnalyzer..."
+        Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+        
+        Write-Host "Running PSScriptAnalyzer..."
+        $results = Invoke-ScriptAnalyzer -Path windows -Recurse -ReportSummary
+        
+        if ($results) {
+            Write-Host "PSScriptAnalyzer found issues:" -ForegroundColor Yellow
+            $results | Format-Table -AutoSize
+        } else {
+            Write-Host "✓ No issues found" -ForegroundColor Green
+        }
