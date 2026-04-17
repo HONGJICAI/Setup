@@ -55,8 +55,6 @@ jobs:
           command -v gh
           command -v pnpm
           command -v jq
-          command -v rg
-          command -v fd
           command -v bat
           command -v eza
           command -v bw

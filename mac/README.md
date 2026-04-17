@@ -13,7 +13,7 @@ Open a new terminal (or `exec zsh`) after it finishes to pick up shell changes.
 
 ## What it installs
 
-- **CLI**: git, gh, pnpm, jq, ripgrep, fd, bat, eza, bitwarden-cli
+- **CLI**: git, gh, pnpm, jq, bat, eza, bitwarden-cli
 - **Apps**: VS Code, OrbStack, Chrome, Bitwarden, Ghostty, Windows App
   (Microsoft Remote Desktop), Stats, Bruno, Raycast
 - **Font**: JetBrainsMono Nerd Font

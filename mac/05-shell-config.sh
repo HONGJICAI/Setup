@@ -36,10 +36,9 @@ export NVM_DIR="\$HOME/.nvm"
 [ -s "\$NVM_DIR/nvm.sh" ] && \. "\$NVM_DIR/nvm.sh"
 [ -s "\$NVM_DIR/bash_completion" ] && \. "\$NVM_DIR/bash_completion"
 
-# eza is close enough to ls that these aliases are safe. bat/fd/rg are
-# intentionally NOT aliased over cat/find/grep because their flags and
-# regex dialects differ — paste-from-docs will otherwise misbehave.
-# Use \`bat\`, \`fd\`, \`rg\` directly.
+# eza is close enough to ls that these aliases are safe. bat is
+# intentionally NOT aliased over cat because its flags differ enough
+# to surprise when pasting from docs. Use \`bat\` directly.
 alias ls='eza'
 alias ll='eza -lah --git'
 alias la='eza -la'
