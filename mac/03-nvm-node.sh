@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "==> nvm + Node LTS"
+NVM_VERSION="v0.40.1"
+
+echo "==> nvm ${NVM_VERSION} + Node LTS"
 
 export NVM_DIR="$HOME/.nvm"
 
 if [ ! -s "$NVM_DIR/nvm.sh" ]; then
-  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+  curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh" | bash
 fi
 
 # shellcheck source=/dev/null

@@ -6,7 +6,17 @@ echo "==> Homebrew"
 if ! xcode-select -p >/dev/null 2>&1; then
   echo "Installing Xcode Command Line Tools (approve the prompt)..."
   xcode-select --install || true
-  until xcode-select -p >/dev/null 2>&1; do sleep 5; done
+  # Poll for up to ~20 minutes. If the user dismissed the GUI prompt
+  # we bail with a clear error rather than spin forever.
+  for _ in $(seq 1 240); do
+    xcode-select -p >/dev/null 2>&1 && break
+    sleep 5
+  done
+  if ! xcode-select -p >/dev/null 2>&1; then
+    echo "Error: Xcode Command Line Tools are still not installed after 20 min." >&2
+    echo "  Run 'xcode-select --install', complete the GUI prompt, then re-run." >&2
+    exit 1
+  fi
 fi
 
 if ! command -v brew >/dev/null 2>&1; then
