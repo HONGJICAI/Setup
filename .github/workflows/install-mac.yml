@@ -1,9 +1,11 @@
 name: install-mac
 
-# Manual only. Runs the full macOS install on a real macOS runner.
-# macOS minutes cost 10x the base rate on private repos, so avoid running
-# this automatically on every push.
+# Runs the full macOS install on a real macOS runner.
+# Free on public repos; macOS minutes cost 10x on private repos.
 on:
+  push:
+    branches: [master, main]
+  pull_request:
   workflow_dispatch:
 
 jobs:
