@@ -77,3 +77,4 @@ jobs:
           ls -d /Applications/Stats.app
           ls -d /Applications/Bruno.app
           ls -d /Applications/Raycast.app
+          ls -d "/Applications/Windows App.app"
