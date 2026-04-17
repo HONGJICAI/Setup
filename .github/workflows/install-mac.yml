@@ -1,0 +1,71 @@
+name: install-mac
+
+# Manual only. Runs the full macOS install on a real macOS runner.
+# macOS minutes cost 10x the base rate on private repos, so avoid running
+# this automatically on every push.
+on:
+  workflow_dispatch:
+
+jobs:
+  install:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+      NONINTERACTIVE: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Homebrew info
+        run: brew --version && brew config
+
+      - name: brew bundle
+        working-directory: mac
+        run: brew bundle --file=./Brewfile --verbose
+
+      - name: nvm + Node LTS
+        working-directory: mac
+        run: ./03-nvm-node.sh
+
+      - name: oh-my-zsh + plugins
+        working-directory: mac
+        run: ./04-oh-my-zsh.sh
+
+      - name: Shell config
+        working-directory: mac
+        run: ./05-shell-config.sh
+
+      - name: Ghostty config
+        working-directory: mac
+        run: ./06-ghostty-config.sh
+
+      - name: Verify key CLI tools
+        run: |
+          set -x
+          command -v git
+          command -v gh
+          command -v pnpm
+          command -v jq
+          command -v rg
+          command -v fd
+          command -v bat
+          command -v eza
+          command -v bw
+          test -d "$HOME/.nvm"
+          test -d "$HOME/.oh-my-zsh"
+          test -d "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+          test -d "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
+          test -f "$HOME/.config/ghostty/config"
+
+      - name: Verify key apps
+        run: |
+          set -x
+          ls -d /Applications/Visual\ Studio\ Code.app
+          ls -d /Applications/OrbStack.app
+          ls -d /Applications/Google\ Chrome.app
+          ls -d /Applications/Bitwarden.app
+          ls -d /Applications/Ghostty.app
+          ls -d /Applications/Stats.app
+          ls -d /Applications/Bruno.app
+          ls -d /Applications/Raycast.app
