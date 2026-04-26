@@ -1,0 +1,35 @@
+# Add package names here, one per line
+# Lines starting with # are treated as comments and will be ignored
+
+# Development tools
+# nodejs
+# python
+# go
+# rust
+
+# Utilities
+# fzf
+# ripgrep
+# fd
+# bat
+# delta
+
+# Editors and IDEs
+# vscode
+# notepadplusplus
+
+# Browsers
+# firefox
+# googlechrome
+
+# Communication
+# slack
+# telegram
+
+# Media
+# vlc
+# mpv
+
+# Productivity
+# obsidian
+# notion

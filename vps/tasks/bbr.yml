@@ -1,0 +1,29 @@
+---
+# BBR TCP Congestion Control Setup
+- name: Check if BBR is already enabled
+  shell: sysctl net.ipv4.tcp_congestion_control
+  register: bbr_status
+  changed_when: false
+
+- name: Enable BBR in sysctl.conf
+  lineinfile:
+    path: /etc/sysctl.conf
+    line: "{{ item }}"
+    create: yes
+  loop:
+    - "net.core.default_qdisc=fq"
+    - "net.ipv4.tcp_congestion_control=bbr"
+  when: "'bbr' not in bbr_status.stdout"
+
+- name: Apply sysctl settings
+  command: sysctl -p
+  when: "'bbr' not in bbr_status.stdout"
+
+- name: Verify BBR is enabled
+  shell: sysctl net.ipv4.tcp_congestion_control
+  register: bbr_verify
+  changed_when: false
+
+- name: Display BBR status
+  debug:
+    msg: "BBR status: {{ bbr_verify.stdout }}"

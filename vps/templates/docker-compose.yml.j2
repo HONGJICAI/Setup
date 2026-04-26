@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  sing-box:
+    image: ghcr.io/sagernet/sing-box:latest
+    container_name: sing-box
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./config.json:/etc/sing-box/config.json:ro
+    command: run -c /etc/sing-box/config.json
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
