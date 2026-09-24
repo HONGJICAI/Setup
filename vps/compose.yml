@@ -1,0 +1,27 @@
+# Pinned versions: bump deliberately, then re-run ./05-services.sh.
+# Host networking so ufw applies and ports come straight from .env.
+services:
+  sing-box:
+    image: ghcr.io/sagernet/sing-box:v1.14.2
+    container_name: sing-box
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /opt/setup/sing-box:/etc/sing-box:ro
+    command: run -c /etc/sing-box/config.json
+
+  derper:
+    image: fredliang/derper:v1.102.4
+    container_name: derper
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      DERP_DOMAIN: ${DERP_DOMAIN}
+      # derper only uses Let's Encrypt when serving on 443 (HTTP-01 on 80).
+      DERP_ADDR: ":443"
+      DERP_HTTP_PORT: "80"
+      DERP_STUN_PORT: ${DERP_STUN_PORT}
+      DERP_VERIFY_CLIENTS: "true"
+    volumes:
+      - /opt/setup/derper:/app/certs
+      - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock

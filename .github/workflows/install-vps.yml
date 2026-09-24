@@ -1,0 +1,45 @@
+name: install-vps
+
+# Runs the full VPS install on a real Ubuntu runner, then connects through it.
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'vps/**'
+      - '.github/workflows/install-vps.yml'
+  pull_request:
+    paths:
+      - 'vps/**'
+      - '.github/workflows/install-vps.yml'
+  workflow_dispatch:
+
+jobs:
+  install:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: vps
+    steps:
+      - uses: actions/checkout@v4
+
+      # Example values are fine here: no TS_AUTHKEY, so Tailscale login is skipped,
+      # and derper just won't get a cert for derp.example.com.
+      - name: Configure
+        run: cp .env.example .env
+
+      - name: Install
+        run: sudo ./install.sh < /dev/null
+
+      - name: Re-run keeps secrets
+        run: |
+          before="$(sudo sha256sum /opt/setup/secrets/* /opt/setup/sing-box/hy2.crt)"
+          sudo ./install.sh < /dev/null
+          after="$(sudo sha256sum /opt/setup/secrets/* /opt/setup/sing-box/hy2.crt)"
+          if [ "$before" != "$after" ]; then
+            diff <(echo "$before") <(echo "$after")
+            exit 1
+          fi
+
+      - name: Connect through REALITY and Hysteria2
+        run: sudo ./test/client-check.sh
