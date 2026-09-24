@@ -71,6 +71,9 @@ for proto in reality hysteria2; do
 done
 
 # derper answers on its plain-HTTP port even before it has a certificate.
+if [[ "$DERP" != true ]]; then
+  exit "$failed"
+fi
 code="$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' http://127.0.0.1/generate_204 || true)"
 if [[ "$code" == 204 ]]; then
   echo "ok: derper"

@@ -2,7 +2,7 @@
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
-echo "==> Services (sing-box + derper)"
+echo "==> Services"
 
 cd "$VPS_DIR"
 secrets="$STATE_DIR/secrets"
@@ -66,13 +66,21 @@ else
 fi
 
 docker compose up -d --remove-orphans
+# A profile that's switched off isn't an orphan, so stop derper explicitly.
+if [[ "$DERP" != true ]]; then
+  docker rm -f derper >/dev/null 2>&1 || true
+fi
 if (( changed )); then
   docker compose restart sing-box
 fi
 
 # Wait until everything is listening.
 listening() { [[ -n "$(ss -Hln "$1" "sport = :$2")" ]]; }
-for check in "-t $REALITY_PORT" "-u $HY2_PORT" "-t 443" "-t 80" "-u $DERP_STUN_PORT"; do
+checks=("-t $REALITY_PORT" "-u $HY2_PORT")
+if [[ "$DERP" == true ]]; then
+  checks+=("-t 443" "-t 80" "-u $DERP_STUN_PORT")
+fi
+for check in "${checks[@]}"; do
   read -r proto port <<< "$check"
   for _ in $(seq 1 30); do
     listening "$proto" "$port" && break
@@ -102,19 +110,25 @@ $vless_link
 
 Hysteria2 (backup, $HY2_PORT/udp; cert pinned by SHA-256):
 $hy2_link
+EOF
+)
 
-Tailscale DERP: add to your tailnet policy file (Access controls), then check
-with 'tailscale netcheck' on a client:
+if [[ "$DERP" == true ]]; then
+  (umask 077; cat >> "$info" <<EOF
+
+Tailscale DERP: add this region under "derpMap" > "Regions" in your tailnet
+policy file (Access controls); merge regions from other VPSes alongside it.
+Check with 'tailscale netcheck' on a client.
 "derpMap": {
   "Regions": {
-    "900": {
-      "RegionID": 900,
-      "RegionCode": "vps",
-      "RegionName": "VPS",
+    "$DERP_REGION_ID": {
+      "RegionID": $DERP_REGION_ID,
+      "RegionCode": "vps$DERP_REGION_ID",
+      "RegionName": "$DERP_DOMAIN",
       "Nodes": [
         {
-          "Name": "900a",
-          "RegionID": 900,
+          "Name": "${DERP_REGION_ID}a",
+          "RegionID": $DERP_REGION_ID,
           "HostName": "$DERP_DOMAIN",
           "IPv4": "$PUBLIC_IP",
           "STUNPort": $DERP_STUN_PORT
@@ -124,7 +138,8 @@ with 'tailscale netcheck' on a client:
   }
 }
 EOF
-)
+  )
+fi
 
 echo
 cat "$info"

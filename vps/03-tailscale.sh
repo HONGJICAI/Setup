@@ -4,6 +4,11 @@
 
 echo "==> Tailscale"
 
+if [[ "$TAILSCALE" != true ]]; then
+  echo "  TAILSCALE=false, skipping"
+  exit 0
+fi
+
 # derper verifies clients through this node's tailscaled, so it must be logged in.
 if ! command -v tailscale >/dev/null 2>&1; then
   curl -fsSL https://tailscale.com/install.sh | sh

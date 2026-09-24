@@ -10,7 +10,9 @@ services:
       - /opt/setup/sing-box:/etc/sing-box:ro
     command: run -c /etc/sing-box/config.json
 
+  # Only started when DERP_DOMAIN is set (lib.sh sets COMPOSE_PROFILES=derp).
   derper:
+    profiles: [derp]
     image: fredliang/derper:v1.102.4
     container_name: derper
     restart: unless-stopped
