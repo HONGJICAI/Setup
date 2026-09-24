@@ -8,6 +8,8 @@ ufw default deny incoming >/dev/null
 ufw default allow outgoing >/dev/null
 
 # Keep whatever port sshd is actually on reachable before enabling.
+# sshd -T needs /run/sshd, which socket-activated sshd (Ubuntu 24.04) may not have created yet.
+mkdir -p /run/sshd
 for port in $(sshd -T 2>/dev/null | awk '$1 == "port" { print $2 }'); do
   ufw allow "$port/tcp" comment 'ssh' >/dev/null
 done

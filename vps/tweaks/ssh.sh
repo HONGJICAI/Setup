@@ -21,6 +21,8 @@ PasswordAuthentication no
 KbdInteractiveAuthentication no
 PermitRootLogin prohibit-password
 EOF
+# sshd -t/-T need this; with socket activation (Ubuntu 24.04) it only exists once ssh.service has run.
+mkdir -p /run/sshd
 sshd -t
 systemctl try-reload-or-restart ssh.service
 
