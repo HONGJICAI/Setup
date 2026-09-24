@@ -1,0 +1,45 @@
+name: install-windows
+
+# Runs the Scoop part of the Windows install on a real Windows runner.
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'windows/**'
+      - '.github/workflows/install-windows.yml'
+  pull_request:
+    paths:
+      - 'windows/**'
+      - '.github/workflows/install-windows.yml'
+  workflow_dispatch:
+
+jobs:
+  install:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # Windows PowerShell 5.1, the shell a fresh PC has. One step so that
+      # SCOOP and PATH set by 01-scoop.ps1 carry through to the checks.
+      # winget apps are skipped: they are GUI installers (see windows/README.md).
+      - name: Install and verify
+        shell: powershell
+        working-directory: windows
+        run: |
+          $ErrorActionPreference = 'Stop'
+          .\01-scoop.ps1
+          .\02-scoop-apps.ps1
+          .\03-git-config.ps1
+
+          # Second run must be a no-op.
+          .\02-scoop-apps.ps1
+
+          Write-Host "SCOOP=$env:SCOOP"
+          Get-Content scoop.txt | ForEach-Object { ($_ -replace '#.*$', '').Trim() } | Where-Object { $_ } |
+            ForEach-Object {
+              $name = $_.Split('/')[-1]
+              if (-not (Test-Path "$env:SCOOP\apps\$name\current")) { throw "$name not installed" }
+            }
+          scoop list
+          if ((git config --global init.defaultBranch) -ne 'main') { throw 'git config not applied' }
