@@ -39,7 +39,7 @@ jobs:
           Get-Content scoop.txt | ForEach-Object { ($_ -replace '#.*$', '').Trim() } | Where-Object { $_ } |
             ForEach-Object {
               $name = $_.Split('/')[-1]
-              if (-not (Test-Path "$env:SCOOP\apps\$name\current")) { throw "$name not installed" }
+              if (-not (Test-Path "$env:SCOOP\apps\$name\current\install.json")) { throw "$name not installed" }
             }
           scoop list
           if ((git config --global init.defaultBranch) -ne 'main') { throw 'git config not applied' }

@@ -19,9 +19,17 @@ foreach ($bucket in $buckets) {
 $failed = @()
 foreach ($app in $apps) {
     $name = $app.Split('/')[-1]
-    if (Test-Path "$scoopDir\apps\$name\current") {
+    # Scoop writes install.json as the very last install step, so its absence
+    # means a previous install was interrupted. `current` alone isn't enough:
+    # it's linked before shims and post_install run.
+    if (Test-Path "$scoopDir\apps\$name\current\install.json") {
         Write-Host "  $name already installed"
         continue
+    }
+    if (Test-Path "$scoopDir\apps\$name") {
+        # Scoop refuses to install over a failed install; clear it first (persisted data is kept).
+        Write-Host "  $name has an incomplete install, removing it first"
+        scoop uninstall $name
     }
     scoop install $app
     if ($LASTEXITCODE -ne 0) { $failed += $app }
