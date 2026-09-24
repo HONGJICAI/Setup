@@ -13,7 +13,7 @@ jobs:
       - name: Install shellcheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck
       - name: Run shellcheck
-        run: shellcheck -x mac/*.sh
+        run: shellcheck -x -P SCRIPTDIR mac/*.sh vps/*.sh vps/tweaks/*.sh vps/test/*.sh
 
   psscriptanalyzer:
     runs-on: ubuntu-latest
