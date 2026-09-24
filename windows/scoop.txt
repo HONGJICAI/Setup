@@ -6,7 +6,6 @@ git
 7zip
 aria2
 wget
-sudo
 which
 grep
 less
