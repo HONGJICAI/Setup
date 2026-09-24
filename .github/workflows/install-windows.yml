@@ -29,10 +29,10 @@ jobs:
           $ErrorActionPreference = 'Stop'
           .\01-scoop.ps1
           .\02-scoop-apps.ps1
-          .\03-git-config.ps1
-          .\04-sudo.ps1
+          .\03-tweaks.ps1
 
           # Second run must be a no-op.
+          .\03-tweaks.ps1
           .\02-scoop-apps.ps1
 
           Write-Host "SCOOP=$env:SCOOP"
@@ -52,10 +52,10 @@ jobs:
           $ErrorActionPreference = 'Stop'
           winget --version
           $exclude = 'Docker.DockerDesktop'
-          .\05-winget-apps.ps1 -Exclude $exclude
+          .\04-winget-apps.ps1 -Exclude $exclude
 
           # Second run must be a no-op.
-          $out = .\05-winget-apps.ps1 -Exclude $exclude *>&1 | Out-String
+          $out = .\04-winget-apps.ps1 -Exclude $exclude *>&1 | Out-String
           Write-Host $out
           Get-Content winget.txt | ForEach-Object { ($_ -replace '#.*$', '').Trim() } |
             Where-Object { $_ -and $_ -ne $exclude } |

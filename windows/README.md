@@ -30,13 +30,23 @@ Edit the lists, not the scripts:
    installs Scoop to `D:\apps\Scoop` (if D: is a local disk) or
    `C:\apps\Scoop`. Set `$env:SCOOP` first to choose another location.
 2. `02-scoop-apps.ps1` — installs everything in `scoop.txt`
-3. `03-git-config.ps1` — credential manager, `init.defaultBranch main`
-4. `04-sudo.ps1` — turns on Windows 11's built-in `sudo` (inline mode).
-   Needs admin, so a non-elevated run shows one UAC prompt. Skipped before 24H2.
-5. `05-winget-apps.ps1` — installs everything in `winget.txt`
+3. `03-tweaks.ps1` — runs every script in `tweaks\` (see below)
+4. `04-winget-apps.ps1` — installs everything in `winget.txt`
 
 Each script is idempotent: already-installed apps are skipped. A step that
 fails to install something lists it and stops, so fix it and re-run.
+
+## Tweaks
+
+One-off settings live in `tweaks\`, one file per tweak, no numbering:
+
+- `git.ps1` — credential manager, `init.defaultBranch main`
+- `sudo.ps1` — turns on Windows 11's built-in `sudo` (inline mode). Needs
+  admin, so a non-elevated run shows one UAC prompt. Skipped before 24H2.
+
+To add one, drop a `.ps1` in `tweaks\`; nothing else needs editing. Tweaks
+must not depend on each other and must be safe to re-run. If one fails the
+rest still run, and the failures are listed at the end.
 
 ## CI
 

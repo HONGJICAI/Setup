@@ -1,7 +1,5 @@
 $ErrorActionPreference = 'Stop'
 
-Write-Host '==> Windows sudo'
-
 # Built into Windows 11 24H2+, off by default. Enabling it needs admin.
 $sudo = "$env:SystemRoot\System32\sudo.exe"
 if (-not (Test-Path $sudo)) {

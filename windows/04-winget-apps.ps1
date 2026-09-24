@@ -1,4 +1,4 @@
-# Usage: .\05-winget-apps.ps1 [-Exclude Id1, Id2]
+# Usage: .\04-winget-apps.ps1 [-Exclude Id1, Id2]
 param([string[]]$Exclude = @())
 $ErrorActionPreference = 'Stop'
 
