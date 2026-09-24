@@ -1,6 +1,6 @@
 name: install-windows
 
-# Runs the Scoop part of the Windows install on a real Windows runner.
+# Runs the Windows install on a real Windows runner.
 on:
   push:
     branches: [master, main]
@@ -22,7 +22,6 @@ jobs:
 
       # Windows PowerShell 5.1, the shell a fresh PC has. One step so that
       # SCOOP and PATH set by 01-scoop.ps1 carry through to the checks.
-      # winget apps are skipped: they are GUI installers (see windows/README.md).
       - name: Install and verify
         shell: powershell
         working-directory: windows
@@ -43,3 +42,20 @@ jobs:
             }
           scoop list
           if ((git config --global init.defaultBranch) -ne 'main') { throw 'git config not applied' }
+
+      # Docker Desktop is excluded: it needs WSL2/Hyper-V, which the runner VM lacks.
+      - name: winget apps
+        shell: powershell
+        working-directory: windows
+        run: |
+          $ErrorActionPreference = 'Stop'
+          winget --version
+          $exclude = 'Docker.DockerDesktop'
+          .\04-winget-apps.ps1 -Exclude $exclude
+
+          # Second run must be a no-op.
+          $out = .\04-winget-apps.ps1 -Exclude $exclude *>&1 | Out-String
+          Write-Host $out
+          Get-Content winget.txt | ForEach-Object { ($_ -replace '#.*$', '').Trim() } |
+            Where-Object { $_ -and $_ -ne $exclude } |
+            ForEach-Object { if ($out -notmatch "$([regex]::Escape($_)) already installed") { throw "$_ reinstalled on second run" } }

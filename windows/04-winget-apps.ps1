@@ -1,3 +1,5 @@
+# Usage: .\04-winget-apps.ps1 [-Exclude Id1, Id2]
+param([string[]]$Exclude = @())
 $ErrorActionPreference = 'Stop'
 
 Write-Host '==> winget apps (winget.txt)'
@@ -8,7 +10,7 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
 
 $ids = Get-Content (Join-Path $PSScriptRoot 'winget.txt') |
     ForEach-Object { ($_ -replace '#.*$', '').Trim() } |
-    Where-Object { $_ }
+    Where-Object { $_ -and $_ -notin $Exclude }
 
 $failed = @()
 foreach ($id in $ids) {

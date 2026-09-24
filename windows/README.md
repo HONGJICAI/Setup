@@ -38,7 +38,7 @@ fails to install something lists it and stops, so fix it and re-run.
 
 ## CI
 
-`.github/workflows/install-windows.yml` runs steps 1–3 on `windows-latest`
-for any change under `windows/`. The winget step is skipped there: its apps
-are GUI installers (Docker Desktop needs WSL and a reboot). `lint.yml` runs
-PSScriptAnalyzer on the scripts.
+`.github/workflows/install-windows.yml` runs the whole install on
+`windows-latest` for any change under `windows/`, twice, checking the second
+run installs nothing. Docker Desktop is excluded there (`-Exclude`) since it
+needs WSL2/Hyper-V. `lint.yml` runs PSScriptAnalyzer on the scripts.
