@@ -5,10 +5,6 @@
 git
 7zip
 aria2
-wget
-which
-grep
-less
 vim
 gh
 jq
