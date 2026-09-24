@@ -1,0 +1,7 @@
+# winget package IDs, one per line. `#` starts a comment.
+# Find IDs with: winget search <name>
+
+Google.Chrome
+Microsoft.VisualStudioCode
+Bandisoft.Honeyview
+Docker.DockerDesktop

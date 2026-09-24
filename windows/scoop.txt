@@ -1,0 +1,10 @@
+# Scoop apps, one per line. `#` starts a comment.
+# Use `bucket/app` for apps outside the main bucket (the bucket is added
+# automatically), e.g. `extras/vscode`.
+
+git
+7zip
+aria2
+vim
+gh
+jq
