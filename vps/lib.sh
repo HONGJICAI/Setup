@@ -26,36 +26,68 @@ DERP_DOMAIN="${DERP_DOMAIN:-}"
 TAILSCALE="${TAILSCALE:-true}"
 TS_AUTHKEY="${TS_AUTHKEY:-}"
 REALITY_PORT="${REALITY_PORT:-}"
+REALITY_SNI="${REALITY_SNI:-}"
+REALITY_SNI_B="${REALITY_SNI_B:-}"
+REALITY_PORT_B="${REALITY_PORT_B:-}"
+HY2_ENABLED="${HY2_ENABLED:-false}"
 HY2_PORT="${HY2_PORT:-443}"
 DERP_STUN_PORT="${DERP_STUN_PORT:-3478}"
 DERP_REGION_ID="${DERP_REGION_ID:-900}"
-REALITY_SNI="${REALITY_SNI:-www.microsoft.com}"
 HY2_SNI="${HY2_SNI:-www.bing.com}"
 PUBLIC_IP="${PUBLIC_IP:-}"
 
-if [[ "$TAILSCALE" != true && "$TAILSCALE" != false ]]; then
-  echo "Error: TAILSCALE must be true or false, got '$TAILSCALE'." >&2
+die() {
+  echo "Error: $*" >&2
   exit 1
+}
+
+for flag in TAILSCALE HY2_ENABLED; do
+  if [[ "${!flag}" != true && "${!flag}" != false ]]; then
+    die "$flag must be true or false, got '${!flag}'."
+  fi
+done
+
+# No default: a big-brand SNI (apple, microsoft…) on a small VPS IP is an easy
+# tell. Pick a real TLS 1.3 + h2 site hosted near this VPS (see README).
+if [[ -z "$REALITY_SNI" ]]; then
+  die "REALITY_SNI is empty. Set it in .env to a real TLS 1.3 + h2 site near this VPS (see README)."
 fi
+if [[ -n "$REALITY_SNI_B" && "$REALITY_SNI_B" == "$REALITY_SNI" ]]; then
+  die "REALITY_SNI_B must differ from REALITY_SNI."
+fi
+
 if [[ -n "$DERP_DOMAIN" ]]; then
   DERP=true
   if [[ "$TAILSCALE" != true ]]; then
-    echo "Error: derper verifies clients through tailscaled; set TAILSCALE=true or clear DERP_DOMAIN." >&2
-    exit 1
+    die "derper verifies clients through tailscaled; set TAILSCALE=true or clear DERP_DOMAIN."
   fi
+  # derper needs 443/tcp, so both REALITY inbounds move off it.
   REALITY_PORT="${REALITY_PORT:-8443}"
-  if [[ "$REALITY_PORT" == 443 ]]; then
-    echo "Error: derper needs 443/tcp; pick another REALITY_PORT." >&2
-    exit 1
-  fi
+  [[ -n "$REALITY_SNI_B" ]] && REALITY_PORT_B="${REALITY_PORT_B:-9443}"
   # Turns on the derper service in compose.yml.
   COMPOSE_PROFILES=derp
 else
   DERP=false
   REALITY_PORT="${REALITY_PORT:-443}"
+  [[ -n "$REALITY_SNI_B" ]] && REALITY_PORT_B="${REALITY_PORT_B:-8443}"
   COMPOSE_PROFILES=
 fi
-export DERP DERP_DOMAIN DERP_REGION_ID TAILSCALE COMPOSE_PROFILES REALITY_PORT HY2_PORT DERP_STUN_PORT REALITY_SNI HY2_SNI
+
+# Every TCP listener needs its own port.
+tcp_ports=("$REALITY_PORT")
+[[ -n "$REALITY_SNI_B" ]] && tcp_ports+=("$REALITY_PORT_B")
+[[ "$DERP" == true ]] && tcp_ports+=(443 80)
+if [[ -n "$(printf '%s\n' "${tcp_ports[@]}" | sort | uniq -d)" ]]; then
+  die "TCP ports clash: ${tcp_ports[*]}. Check REALITY_PORT, REALITY_PORT_B and derper (443, 80)."
+fi
+if [[ "$HY2_ENABLED" == true && "$DERP" == true && "$HY2_PORT" == "$DERP_STUN_PORT" ]]; then
+  die "HY2_PORT and DERP_STUN_PORT are both $HY2_PORT/udp."
+fi
+unset tcp_ports
+
+export DERP DERP_DOMAIN DERP_REGION_ID TAILSCALE COMPOSE_PROFILES \
+  REALITY_PORT REALITY_SNI REALITY_PORT_B REALITY_SNI_B \
+  HY2_ENABLED HY2_PORT HY2_SNI DERP_STUN_PORT
 
 apt_install() {
   DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=300 install -y --no-install-recommends "$@"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# End-to-end check, run on the VPS after install.sh: connects to both sing-box
-# inbounds as a client over 127.0.0.1 and fetches a page through each.
+# End-to-end check, run on the VPS after install.sh: connects to every enabled
+# sing-box inbound as a client over 127.0.0.1 and fetches a page through each.
 # shellcheck source=../lib.sh
 . "$(dirname "$0")/../lib.sh"
 
@@ -10,18 +10,19 @@ sb_image="$(docker compose config --images | grep sing-box)"
 tmp="$(mktemp -d)"
 trap 'docker rm -f sb-client >/dev/null 2>&1 || true; rm -rf "$tmp"' EXIT
 
-cat > "$tmp/reality.json" <<EOF
+reality_client() { # port sni
+  cat <<EOF
 {
   "inbounds": [{ "type": "socks", "listen": "127.0.0.1", "listen_port": 10800 }],
   "outbounds": [{
     "type": "vless",
     "server": "127.0.0.1",
-    "server_port": $REALITY_PORT,
+    "server_port": $1,
     "uuid": "$(cat "$secrets/vless_uuid")",
     "flow": "xtls-rprx-vision",
     "tls": {
       "enabled": true,
-      "server_name": "$REALITY_SNI",
+      "server_name": "$2",
       "utls": { "enabled": true, "fingerprint": "chrome" },
       "reality": {
         "enabled": true,
@@ -32,9 +33,19 @@ cat > "$tmp/reality.json" <<EOF
   }]
 }
 EOF
+}
+
+protos=(reality-a)
+reality_client "$REALITY_PORT" "$REALITY_SNI" > "$tmp/reality-a.json"
+if [[ -n "$REALITY_SNI_B" ]]; then
+  protos+=(reality-b)
+  reality_client "$REALITY_PORT_B" "$REALITY_SNI_B" > "$tmp/reality-b.json"
+fi
 
 # Trusts exactly the server's self-signed cert, like a pinned client.
-cat > "$tmp/hysteria2.json" <<EOF
+if [[ "$HY2_ENABLED" == true ]]; then
+  protos+=(hysteria2)
+  cat > "$tmp/hysteria2.json" <<EOF
 {
   "inbounds": [{ "type": "socks", "listen": "127.0.0.1", "listen_port": 10800 }],
   "outbounds": [{
@@ -51,9 +62,10 @@ cat > "$tmp/hysteria2.json" <<EOF
   }]
 }
 EOF
+fi
 
 failed=0
-for proto in reality hysteria2; do
+for proto in "${protos[@]}"; do
   docker run -d --name sb-client --network host \
     -v "$tmp:/client:ro" -v "$STATE_DIR/sing-box:/etc/sing-box:ro" \
     "$sb_image" run -c "/client/$proto.json" >/dev/null
@@ -69,6 +81,12 @@ for proto in reality hysteria2; do
   fi
   docker rm -f sb-client >/dev/null
 done
+
+# Disabled inbounds must not be listening.
+if [[ "$HY2_ENABLED" != true && -n "$(ss -Hlnu "sport = :$HY2_PORT")" ]]; then
+  echo "FAIL: HY2_ENABLED=false but something listens on $HY2_PORT/udp" >&2
+  failed=1
+fi
 
 # derper answers on its plain-HTTP port even before it has a certificate.
 if [[ "$DERP" != true ]]; then

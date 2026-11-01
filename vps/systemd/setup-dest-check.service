@@ -1,0 +1,9 @@
+[Unit]
+Description=Check that the REALITY handshake sites still work
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/opt/setup/dest-check.env
+ExecStart=/usr/local/bin/setup-dest-check

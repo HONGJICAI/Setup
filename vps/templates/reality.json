@@ -1,0 +1,25 @@
+{
+  "type": "vless",
+  "tag": "${INBOUND_TAG}",
+  "listen": "::",
+  "listen_port": ${INBOUND_PORT},
+  "users": [
+    {
+      "uuid": "${VLESS_UUID}",
+      "flow": "xtls-rprx-vision"
+    }
+  ],
+  "tls": {
+    "enabled": true,
+    "server_name": "${INBOUND_SNI}",
+    "reality": {
+      "enabled": true,
+      "handshake": {
+        "server": "${INBOUND_SNI}",
+        "server_port": 443
+      },
+      "private_key": "${REALITY_PRIVATE_KEY}",
+      "short_id": ["${REALITY_SHORT_ID}"]
+    }
+  }
+}

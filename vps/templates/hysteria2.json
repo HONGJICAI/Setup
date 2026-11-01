@@ -1,0 +1,22 @@
+{
+  "type": "hysteria2",
+  "tag": "hysteria2",
+  "listen": "::",
+  "listen_port": ${HY2_PORT},
+  "users": [
+    {
+      "password": "${HY2_PASSWORD}"
+    }
+  ],
+  "tls": {
+    "enabled": true,
+    "alpn": ["h3"],
+    "certificate_path": "/etc/sing-box/hy2.crt",
+    "key_path": "/etc/sing-box/hy2.key"
+  },
+  "masquerade": {
+    "type": "proxy",
+    "url": "https://${HY2_SNI}",
+    "rewrite_host": true
+  }
+}

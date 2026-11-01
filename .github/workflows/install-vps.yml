@@ -15,12 +15,24 @@ on:
 
 jobs:
   install:
-    name: install (derper ${{ matrix.derper }})
+    name: install (${{ matrix.name }})
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        derper: ["off", "on"]
+        include:
+          # The recommended proxy VPS: one REALITY inbound, nothing else.
+          - name: minimal
+            env: |
+              REALITY_SNI=www.microsoft.com
+              TAILSCALE=false
+          # Everything on: two REALITY inbounds, Hysteria2 and derper.
+          - name: full
+            env: |
+              REALITY_SNI=www.microsoft.com
+              REALITY_SNI_B=www.bing.com
+              HY2_ENABLED=true
+              DERP_DOMAIN=derp.example.com
     timeout-minutes: 20
     defaults:
       run:
@@ -28,14 +40,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Example values are fine here: no TS_AUTHKEY, so Tailscale login is skipped,
+      # Later lines in .env win. No TS_AUTHKEY, so Tailscale login is skipped,
       # and derper just won't get a cert for derp.example.com.
-      - name: Configure
+      # CI runners reach the big-brand SNIs fine; on a real VPS, pick nearby sites.
+      # The example leaves REALITY_SNI empty on purpose; lib.sh must refuse it.
+      - name: Empty REALITY_SNI is rejected
         run: |
           cp .env.example .env
-          if [ "${{ matrix.derper }}" = on ]; then
-            sed -i 's/^DERP_DOMAIN=.*/DERP_DOMAIN=derp.example.com/' .env
+          if sudo ./install.sh < /dev/null 2> err.txt; then
+            echo "expected failure"; exit 1
           fi
+          cat err.txt
+          grep -q 'REALITY_SNI is empty' err.txt
+
+      - name: Configure
+        run: printf '%s\n' "${{ matrix.env }}" >> .env
 
       - name: Install
         run: sudo ./install.sh < /dev/null
@@ -43,13 +62,22 @@ jobs:
       # The glob runs under sudo: /opt/setup is mode 700.
       - name: Re-run keeps secrets
         run: |
-          before="$(sudo sh -c 'sha256sum /opt/setup/secrets/* /opt/setup/sing-box/hy2.crt')"
+          snapshot() { sudo sh -c 'sha256sum /opt/setup/secrets/* /opt/setup/sing-box/hy2.crt 2>/dev/null' || true; }
+          before="$(snapshot)"
           sudo ./install.sh < /dev/null
-          after="$(sudo sh -c 'sha256sum /opt/setup/secrets/* /opt/setup/sing-box/hy2.crt')"
+          after="$(snapshot)"
           if [ "$before" != "$after" ]; then
             diff <(echo "$before") <(echo "$after")
             exit 1
           fi
 
-      - name: Connect through REALITY and Hysteria2
+      - name: Connect through every inbound
         run: sudo ./test/client-check.sh
+
+      - name: Handshake-site check fails on a dead site
+        run: |
+          setup-dest-check www.microsoft.com
+          if setup-dest-check does-not-exist.invalid; then
+            echo "expected failure"; exit 1
+          fi
+          systemctl is-enabled setup-dest-check.timer

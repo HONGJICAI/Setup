@@ -15,8 +15,13 @@ for port in $(sshd -T 2>/dev/null | awk '$1 == "port" { print $2 }'); do
 done
 ufw allow 22/tcp comment 'ssh' >/dev/null
 
-ufw allow "$REALITY_PORT/tcp" comment 'sing-box REALITY' >/dev/null
-ufw allow "$HY2_PORT/udp" comment 'sing-box Hysteria2' >/dev/null
+ufw allow "$REALITY_PORT/tcp" comment 'sing-box REALITY A' >/dev/null
+if [[ -n "$REALITY_SNI_B" ]]; then
+  ufw allow "$REALITY_PORT_B/tcp" comment 'sing-box REALITY B' >/dev/null
+fi
+if [[ "$HY2_ENABLED" == true ]]; then
+  ufw allow "$HY2_PORT/udp" comment 'sing-box Hysteria2' >/dev/null
+fi
 if [[ "$DERP" == true ]]; then
   ufw allow 80/tcp comment 'derper ACME' >/dev/null
   ufw allow 443/tcp comment 'derper' >/dev/null
