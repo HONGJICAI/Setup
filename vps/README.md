@@ -5,7 +5,7 @@ Sets up a fresh Ubuntu 24.04 VPS (x86_64) with:
 - **sing-box**: VLESS + REALITY + Vision, optionally a second REALITY inbound
   borrowing a different site, and optionally Hysteria2 (off by default)
 - **derper** (optional): a Tailscale DERP relay that only serves your own tailnet
-- **Tailscale** (optional), **Docker**, BBR, key-only SSH and a ufw firewall
+- **Tailscale** (optional), **Docker**, BBR and a ufw firewall. SSH login settings are left as the image ships them
 - an hourly check that the REALITY handshake sites still work
 
 The same script covers every VPS. Only the ones with `DERP_DOMAIN` set in
@@ -99,7 +99,6 @@ One file per tweak in `tweaks/`, no numbering; drop in a new `.sh` to add one.
 They're independent, and if one fails the rest still run.
 
 - `network.sh` — BBR + larger UDP buffers for QUIC
-- `ssh.sh` — key-only login. Skipped if no `authorized_keys` exists, so it can't lock you out
 - `firewall.sh` — ufw: deny incoming except the ports above
 
 ## Where things live
