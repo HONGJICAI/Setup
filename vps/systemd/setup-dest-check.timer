@@ -1,0 +1,10 @@
+[Unit]
+Description=Hourly check of the REALITY handshake sites
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
