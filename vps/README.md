@@ -45,23 +45,37 @@ configs keep working. `.env` is gitignored, so your domain never lands in the re
 
 REALITY answers anyone who isn't your client with the real TLS handshake of
 `REALITY_SNI`, so to an observer the connection looks like a visit to that
-site. That only holds up if the site plausibly lives at this VPS's IP:
+site. The SNI travels in clear text in every ClientHello, so it has to pass
+two tests:
 
-- **Avoid big brands** (`www.apple.com`, `www.microsoft.com`…). They have CDNs
-  inside China, so a small overseas IP claiming to be them is an obvious tell.
-- **Borrow a neighbour**: a real site hosted in the same subnet or at least
-  the same provider. Scan your /24 for hosts with 443 open, read their
-  certificates (`openssl s_client -connect <ip>:443 -alpn h2 -tls1_3`), and keep
-  sites that resolve to that subnet, support TLS 1.3 + h2, have a valid cert,
-  look legitimate, and are reachable from China. Check one with
-  `bin/dest-check.sh <site>`.
-- A neighbour can go away. When it does, every connection to that inbound
-  fails, because REALITY contacts the site on each connection. So set
-  `REALITY_SNI_B` to a second site: it runs as a separate inbound on its own
-  port, and a client fallback/urltest group over both links moves to B by
-  itself. `setup-dest-check.timer` checks both sites hourly
-  (`journalctl -u setup-dest-check`); replace a dead one in `.env`, re-run
-  `./05-services.sh`, and update that link in your clients.
+1. **It must not be blocked in China.** The firewall filters by SNI no matter
+   which IP you connect to: a blocked name gets the connection reset right
+   after the ClientHello, and REALITY never gets a chance. Test from a
+   network inside China with a full TLS handshake, not just a TCP connect:
+   `curl -sS -o /dev/null -w '%{http_code}\n' https://<site>/` must print an
+   HTTP status. A TCP connect to the site's IP proves nothing here.
+2. **It should not stand out.** Every third-party name looks a bit odd on a
+   small VPS IP, so prefer names few other proxies use. `www.apple.com`,
+   `www.microsoft.com`, `www.bing.com`, `www.cloudflare.com`, `www.tesla.com`
+   and `www.amd.com` are among the most common, and the first two also serve
+   China from domestic CDNs.
+
+Don't pick sites just because they share your subnet. On cheap Hong Kong
+ranges most neighbours are gambling, scam or API-relay sites aimed at China,
+which is exactly what gets SNI-blocked. One such setup failed with every
+neighbour that was tried.
+
+On the VPS, `bin/dest-check.sh <site>` checks the other half: TLS 1.3, h2
+and a valid cert. It can't tell whether China blocks the name.
+
+REALITY contacts the site on every connection, so a site that goes away
+takes its inbound down, and so does a name that gets blocked later. Set
+`REALITY_SNI_B` to a second, different site. It runs as a separate inbound on
+its own port, and a client fallback/urltest group over both links moves to B
+by itself. `setup-dest-check.timer` checks both sites hourly
+(`journalctl -u setup-dest-check`). To replace a site, edit `.env`, re-run
+`./05-services.sh`, and re-import that link in your clients, since the
+`sni` changes.
 
 ## Ports
 

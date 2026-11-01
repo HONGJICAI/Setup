@@ -47,10 +47,10 @@ for flag in TAILSCALE HY2_ENABLED; do
   fi
 done
 
-# No default: a big-brand SNI (apple, microsoft…) on a small VPS IP is an easy
-# tell. Pick a real TLS 1.3 + h2 site hosted near this VPS (see README).
+# No default: the right site depends on what China blocks and what other
+# proxies overuse, so it's a deliberate choice (see README).
 if [[ -z "$REALITY_SNI" ]]; then
-  die "REALITY_SNI is empty. Set it in .env to a real TLS 1.3 + h2 site near this VPS (see README)."
+  die "REALITY_SNI is empty. Set it in .env to a TLS 1.3 + h2 site that isn't blocked in China (see README)."
 fi
 if [[ -n "$REALITY_SNI_B" && "$REALITY_SNI_B" == "$REALITY_SNI" ]]; then
   die "REALITY_SNI_B must differ from REALITY_SNI."
